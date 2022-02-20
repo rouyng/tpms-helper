@@ -1,0 +1,22 @@
+#!/bin/bash
+# TPMS Helper v1
+# for more information, see https://r-c-y.net
+
+# checking for rtl_433 installation
+rtl_433 -V > /dev/null 2>&1 || { echo "rtl_433 was not found, please install it." >&2; exit 1; }
+
+WHEELS=("front left" "back left" "back right" "front right")
+
+
+# define variable containing command to run SDR
+# sets device type, frequency, minimum detection level
+runsdr="rtl_433 -M level -f 315000000 -F json -T 60 -R 110 -Y minlevel=-1.0"
+
+for ((i = 0; i < ${#WHEELS[@]}; i++)); do
+    echo "Please place sensor at ${WHEELS[$i]}"
+    # begin listening for PMV-107J sensors on 315 MHz
+    IDS=( $($runsdr | grep "{*}" | jq '.id') ) || { echo "Could not connect to RTL-SDR!" >&2; exit 1; }
+    for ID in ${IDS[@]}; do
+        echo "Found sensor with ID: $ID"
+    done
+done
