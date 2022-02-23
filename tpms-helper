@@ -1,21 +1,22 @@
 #!/bin/bash
 # TPMS Helper v1
+# Bash shell script to guide testing of Toyota PMV-107J TPMS sensors using rtl_433
+# Requires rtl_433, jq, mapfile (bash >4.0)
 # for more information, see https://r-c-y.net
 
 # checking for rtl_433 installation
 rtl_433 -V > /dev/null 2>&1 || { echo "rtl_433 was not found, please install it." >&2; exit 1; }
 
-WHEELS=("front left" "back left" "back right" "front right")
-
-
+WHEELS=("front left" "back left" "back right" "front right") # define the four wheel positions to check
+MINLEVEL="-0.5" # minimum signal strength level for detection. Increase this if no sensor is detcted
 # define variable containing command to run SDR
 # sets device type, frequency, minimum detection level
-runsdr="rtl_433 -M level -f 315000000 -F json -T 60 -R 110 -Y minlevel=-1.0"
+RUNSDR="rtl_433 -M level -f 315000000 -F json -T 60 -R 110 -Y minlevel=$MINLEVEL"
 
 for ((i = 0; i < ${#WHEELS[@]}; i++)); do
-    echo "Please place sensor at ${WHEELS[$i]}"
+    echo -e "\e[32mPlease place sensor at ${WHEELS[$i]} wheel!\e[0m"
     # begin listening for PMV-107J sensors on 315 MHz
-    mapfile -t MYIDS < <({ $runsdr || { echo "Could not connect to RTL-SDR!" >&2; exit 1; } } | grep "{*}" | jq '.id')
+    mapfile -t MYIDS < <({ $RUNSDR || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; } } | grep "{*}" | jq '.id')
     for ID in "${IDS[@]}"; do
         echo "Found sensor with ID: $ID"
     done
