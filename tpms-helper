@@ -16,12 +16,14 @@ rtl_433 -V > /dev/null 2>&1 || { echo "rtl_433 was not found, please install it.
 
 WHEELS=("front left" "back left" "back right" "front right") # define the four wheel positions to check
 for ((i = 0; i < ${#WHEELS[@]}; i++)); do
-    echo -e "\e[32mPlease place sensor at ${WHEELS[$i]} wheel!\e[0m"
+    echo -e "\e[33mPlease place sensor at ${WHEELS[$i]} wheel"
+    read -n 1 -s -r -p "Press any key to begin listening for signals"
+    echo -e "\e[0m"
     # begin listening for PMV-107J sensors on 315 MHz
     echo -e "\e[32mRunning rtl_433...\e[0m"
     mapfile -t SIGNALS < <( output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }  && echo "$output" | grep "{*}")
     if [[ ${#SIGNALS[@]} -gt 1 ]]; then
-        echo -e "\e[33mReceived signals from multiple sensors at ${WHEELS[$i]} wheel.\e[0m"
+        echo -e "\e[32mReceived signals from multiple sensors at ${WHEELS[$i]} wheel.\e[0m"
         for SIGNAL in "${SIGNALS[@]}"; do
             ID=$(echo "$SIGNAL" | jq ".id")
             RSSI=$(echo "$SIGNAL" | jq ".rssi")
