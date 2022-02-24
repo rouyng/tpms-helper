@@ -4,20 +4,31 @@
 # Requires rtl_433, jq, mapfile (bash >4.0)
 # for more information, see https://r-c-y.net
 
+MINLEVEL="-0.5" # minimum signal strength level for detection. Increase this if no sensor is detcted
+SENSOR_TYPE="110" # sensor type, default is 110 for Toyota's PMJ-107V. See rtl_433 docs for more options
+RX_FREQ="315000000" # Receive frequency to listen for signals, in Hz. Default is 315 MHz for Toyota sensors
+
+# define command to run rtl_433
+RUNSDR="rtl_433 -M level -f $RX_FREQ -F json -T 60 -R $SENSOR_TYPE -Y minlevel=$MINLEVEL"
+
 # checking for rtl_433 installation
 rtl_433 -V > /dev/null 2>&1 || { echo "rtl_433 was not found, please install it." >&2; exit 1; }
 
 WHEELS=("front left" "back left" "back right" "front right") # define the four wheel positions to check
-MINLEVEL="-0.5" # minimum signal strength level for detection. Increase this if no sensor is detcted
-# define variable containing command to run SDR
-# sets device type, frequency, minimum detection level
-RUNSDR="rtl_433 -M level -f 315000000 -F json -T 60 -R 110 -Y minlevel=$MINLEVEL"
-
 for ((i = 0; i < ${#WHEELS[@]}; i++)); do
     echo -e "\e[32mPlease place sensor at ${WHEELS[$i]} wheel!\e[0m"
     # begin listening for PMV-107J sensors on 315 MHz
-    mapfile -t MYIDS < <({ $RUNSDR || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; } } | grep "{*}" | jq '.id')
-    for ID in "${IDS[@]}"; do
-        echo "Found sensor with ID: $ID"
-    done
+    echo -e "\e[32mRunning rtl_433...\e[0m"
+    mapfile -t IDS < <( output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }  && echo "$output" | grep "{*}" | jq '.id')
+    if [[ ${#IDS[@]} -gt 1 ]]; then
+        echo -e "\e[33mReceived signals from multiple sensors at ${WHEELS[$i]} wheel\e[0m"
+        for ID in "${IDS[@]}"; do
+            echo "Found sensor with ID: $ID"
+        done
+    elif [[ ${#IDS[@]} == 1 ]]; then
+        echo -e "\e[32mReceived signals from one sensor at ${WHEELS[$i]} wheel\e[0m"
+        echo "Found sensor with ID: ${IDS[0]}"
+    elif [[ ${#IDS[@]} == 0 ]]; then
+        echo -e "\e[31mReceived no signals at ${WHEELS[$i]} wheel\e[0m"
+    fi
 done
