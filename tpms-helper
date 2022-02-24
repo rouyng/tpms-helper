@@ -12,14 +12,15 @@ RX_FREQ="315000000" # Receive frequency to listen for signals, in Hz. Default is
 RUNSDR="rtl_433 -M level -f $RX_FREQ -F json -T 60 -R $SENSOR_TYPE -Y minlevel=$MINLEVEL"
 
 # checking for rtl_433 installation
-rtl_433 -V > /dev/null 2>&1 || { echo "rtl_433 was not found, please install it." >&2; exit 1; }
+rtl_433 -V > /dev/null 2>&1 || { echo -e "\e[31mrtl_433 was not found, please install it.\e[0m" >&2; exit 1; }
 
 WHEELS=("front left" "back left" "back right" "front right") # define the four wheel positions to check
 for ((i = 0; i < ${#WHEELS[@]}; i++)); do
+    # prompt user to place sensor at appropriate wheel and wait for input
     echo -e "\e[33mPlease place sensor at ${WHEELS[$i]} wheel"
     read -n 1 -s -r -p "Press any key to begin listening for signals"
     echo -e "\e[0m"
-    # begin listening for PMV-107J sensors on 315 MHz
+    # begin listening for sensor transmissions and save json output to SIGNALS array
     echo -e "\e[32mRunning rtl_433...\e[0m"
     mapfile -t SIGNALS < <( output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }  && echo "$output" | grep "{*}")
     if [[ ${#SIGNALS[@]} -gt 1 ]]; then
