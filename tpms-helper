@@ -11,31 +11,46 @@ RX_FREQ="315000000" # Receive frequency to listen for signals, in Hz. Default is
 # define command to run rtl_433
 RUNSDR="rtl_433 -M level -f $RX_FREQ -F json -T 60 -R $SENSOR_TYPE -Y minlevel=$MINLEVEL"
 
+parse_signal() {
+    local ID
+    ID=$(echo "$1" | jq ".id")
+    local RSSI 
+    RSSI=$(echo "$1" | jq ".rssi")
+    local BATTERY_STATUS
+    if [[ $(echo "$1" | jq ".battery_ok") = 1 ]]; then
+        BATTERY_STATUS="ok"
+    elif [[ $(echo "$1" | jq ".battery_ok") = 0 ]]; then
+        BATTERY_STATUS="low"
+    else
+        BATTERY_STATUS="unknown"
+    fi
+    echo "Found sensor with ID $ID, signal strength is $RSSI, battery is $BATTERY_STATUS"
+    SIGNAL_DATA=("$ID" "$RSSI" "$BATTERY_STATUS")
+}
+
+
 # checking for rtl_433 installation
 rtl_433 -V > /dev/null 2>&1 || { echo -e "\e[31mrtl_433 was not found, please install it.\e[0m" >&2; exit 1; }
 
 WHEELS=("front left" "back left" "back right" "front right") # define the four wheel positions to check
 for ((i = 0; i < ${#WHEELS[@]}; i++)); do
     # prompt user to place sensor at appropriate wheel and wait for input
-    echo -e "\e[33mPlease place sensor at ${WHEELS[$i]} wheel"
+    echo -e "\e[33mPlease place antenna at ${WHEELS[$i]} wheel"
     read -n 1 -s -r -p "Press any key to begin listening for signals"
     echo -e "\e[0m"
     # begin listening for sensor transmissions and save json output to SIGNALS array
-    echo -e "\e[32mRunning rtl_433...\e[0m"
+    echo -e "\e[32mRunning rtl_433, please wait...\e[0m"
     mapfile -t SIGNALS < <( output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }  && echo "$output" | grep "{*}")
-    if [[ ${#SIGNALS[@]} -gt 1 ]]; then
-        echo -e "\e[32mReceived signals from multiple sensors at ${WHEELS[$i]} wheel.\e[0m"
+    if [[ ${#SIGNALS[@]} -gt 0 ]]; then
+        echo -e "\e[32mReceived ${#SIGNALS[@]} signals from sensor(s) at ${WHEELS[$i]} wheel.\e[0m"
         for SIGNAL in "${SIGNALS[@]}"; do
-            ID=$(echo "$SIGNAL" | jq ".id")
-            RSSI=$(echo "$SIGNAL" | jq ".rssi")
-            echo "Found sensor with ID $ID, signal strength is $RSSI"
+            parse_signal "$SIGNAL"
+            # TODO: add $SIGNAL_DATA to nicely formatted text output, in associative array with wheel position as key
         done
-    elif [[ ${#SIGNALS[@]} == 1 ]]; then
-        echo -e "\e[32mReceived signals from one sensor at ${WHEELS[$i]} wheel.\e[0m"
-        ID=$(echo "${SIGNALS[0]}" | jq ".id")
-        RSSI=$(echo "${SIGNALS[0]}" | jq ".rssi")
-        echo "Found sensor with ID $ID, signal strength is $RSSI"
     elif [[ ${#SIGNALS[@]} == 0 ]]; then
         echo -e "\e[31mReceived no signals at ${WHEELS[$i]} wheel.\e[0m"
     fi
 done
+
+# TODO: print nicely formatted summary of sensors found at each wheel
+# TODO: print warning/explanation if multiple sensor ids found at one wheel
