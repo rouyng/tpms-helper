@@ -12,7 +12,7 @@ SENSOR_TYPE="110"
 RX_FREQ="315000000" 
 
 # define command to run rtl_433
-RUNSDR="rtl_433 -M level -f $RX_FREQ -F json -T 60 -R $SENSOR_TYPE -Y minlevel=$MINLEVEL"
+RUNSDR="rtl_433 -M level -f ${RX_FREQ} -F json -T 60 -R ${SENSOR_TYPE} -Y minlevel=${MINLEVEL}"
 
 ###############################
 # Parse json-formatted output of a single signal decoded by rtl_433, set variables, and print details of the signal
@@ -36,7 +36,7 @@ parse_signal() {
     else
         BATTERY_STATUS="unknown"
     fi
-    echo -e "  └─Found sensor with ID $ID, signal strength is $RSSI, battery is $BATTERY_STATUS"
+    echo -e "  └─Found sensor with ID ${ID}, signal strength is ${RSSI}, battery is ${BATTERY_STATUS}"
 }
 
 # declare an associative array for our formatted results, this also acts as a check for bash >4.0
@@ -45,25 +45,25 @@ declare -A WHEEL_SUMMARIES 2> /dev/null || { echo -e "This script requires Bash 
 # checking for rtl_433 installation
 rtl_433 -V > /dev/null 2>&1 || { echo -e "\e[31mrtl_433 was not found, please install it.\e[0m" >&2; exit 1; }
 
-WHEELS=("front left wheel" "back left wheel" "back right wheel" "front right wheel") # define the four wheel positions to check
+WHEELS=("front left wheel" "back left wheel" "back right wheel" "front right wheel")
 for WHEEL in "${WHEELS[@]}"; do
     # prompt user to place sensor at appropriate wheel and wait for input
-    echo -e "\e[33mPlease place antenna at $WHEEL"
+    echo -e "\e[33mPlease place antenna at ${WHEEL}"
     read -n 1 -s -r -p "Press any key to begin listening for signals"
     echo -e "\e[0m"
-    # begin listening for sensor transmissions and save json output to SIGNALS array
+    # begin listening for sensor transmissions and save json output 
+    #  to SIGNALS array
     echo -e "\e[32mRunning rtl_433, please wait...\e[0m"
     output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }
-    mapfile -t SIGNALS < <( echo "$output" | grep "{*}" )
+    mapfile -t SIGNALS < <( echo "${output}" | grep "{*}" )
     if [[ ${#SIGNALS[@]} -gt 0 ]]; then
-        echo -e "\e[32mReceived ${#SIGNALS[@]} signals from sensor(s) at $WHEEL.\e[0m"
+        echo -e "\e[32mReceived ${#SIGNALS[@]} signals from sensor(s) at ${WHEEL}.\e[0m"
         WHEEL_SUMMARY=""
         for SIGNAL in "${SIGNALS[@]}"; do
-            parse_signal "$SIGNAL"
-            printf -v WHEEL_SUMMARY "%s  └─ID: %s, RSSI: %s, Battery status: %s\n" "$WHEEL_SUMMARY" "$ID" "$RSSI" "$BATTERY_STATUS"
-            # TODO: add $SIGNAL_DATA to nicely formatted text output, in associative array with wheel position as key
+            parse_signal "${SIGNAL}"
+            printf -v WHEEL_SUMMARY "%s  └─ID: %s, RSSI: %s, Battery status: %s\n" "${WHEEL_SUMMARY}" "${ID}" "${RSSI}" "${BATTERY_STATUS}"
         done
-        WHEEL_SUMMARIES["$WHEEL"]="$WHEEL_SUMMARY"
+        WHEEL_SUMMARIES["$WHEEL"]="${WHEEL_SUMMARY}"
     elif [[ ${#SIGNALS[@]} == 0 ]]; then
         echo -e "\e[31mReceived no signals at $WHEEL.\e[0m"
         WHEEL_SUMMARIES["$WHEEL"]="  └─\e[31mNONE! Sensor may be faulty or have a dead battery\e[0m"
@@ -72,7 +72,7 @@ done
 
 echo -e "\e[1;32mSummary of sensors detected\e[0m"
 for POSITION in "${!WHEEL_SUMMARIES[@]}"; do
-    echo -e "\e[1m$POSITION\e[0m"
+    echo -e "\e[1m${POSITION}\e[0m"
     SIGNAL_COUNT=$(( $(echo "${WHEEL_SUMMARIES[$POSITION]}" | wc -l )-1 ))
     if [[ SIGNAL_COUNT -gt 1 ]]; then
         TOO_MANY_SIGNALS=true
