@@ -62,8 +62,8 @@ echo -e "\e[1;32mSummary of sensors detected\e[0m"
 for POSITION in "${!WHEEL_SUMMARIES[@]}"; do
     echo -e "\e[1m$POSITION\e[0m"
     SIGNAL_COUNT=$(($(echo "${WHEEL_SUMMARIES[$POSITION]}" | wc -l )-1))
-    if [[ $SIGNAL_COUNT -gt 2 ]]; then
-        echo -e "  └─\e[33mReceived $SIGNAL_COUNT signals at this wheel, consider increasing the MINLEVEL from the current value of ${MINLEVEL}, in order to filter adjacent sensors\e[0m"
+    if [[ $SIGNAL_COUNT -gt 1 ]]; then
+        echo -e "  └─\e[33mReceived $SIGNAL_COUNT signals at this wheel, consider increasing the MINLEVEL from the current value of ${MINLEVEL}, to filter adjacent sensors\e[0m"
     fi
     echo -e "${WHEEL_SUMMARIES[$POSITION]}"
 done
