@@ -92,3 +92,4 @@ fi
 
 # TODO: instead of just printing a warning about too many signals, increase MINLEVEL and loop through detection
 #   process again until no more than one signal is detected at each wheel
+# TODO: use bc to compare and rank signal strength of multiple signals
