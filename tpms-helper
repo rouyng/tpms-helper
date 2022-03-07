@@ -14,6 +14,15 @@ RX_FREQ="315000000"
 # define command to run rtl_433
 RUNSDR="rtl_433 -M level -f $RX_FREQ -F json -T 60 -R $SENSOR_TYPE -Y minlevel=$MINLEVEL"
 
+###############################
+# Parse json-formatted output of a single signal decoded by rtl_433, set variables, and print details of the signal
+# Globals:
+#  ID
+#  RSSI
+#  BATTERY_STATUS
+# Arguments:
+#  String containing json representing one signal decode by rtl_433 -F json
+###############################
 parse_signal() {
     ID="n/a"
     RSSI="n/a"
