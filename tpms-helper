@@ -89,3 +89,6 @@ done
 if $too_many_signals; then
     echo -e "\e[33mWarning: Received more than one signal at a wheel, consider increasing the MINLEVEL from the current value of ${MINLEVEL}, to filter adjacent sensors\e[0m"
 fi
+
+# TODO: instead of just printing a warning about too many signals, increase MINLEVEL and loop through detection
+#   process again until no more than one signal is detected at each wheel
