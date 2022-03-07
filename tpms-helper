@@ -40,7 +40,8 @@ for WHEEL in "${WHEELS[@]}"; do
     echo -e "\e[0m"
     # begin listening for sensor transmissions and save json output to SIGNALS array
     echo -e "\e[32mRunning rtl_433, please wait...\e[0m"
-    mapfile -t SIGNALS < <( output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }  && echo "$output" | grep "{*}")
+    output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }
+    mapfile -t SIGNALS < <( echo "$output" | grep "{*}" )
     if [[ ${#SIGNALS[@]} -gt 0 ]]; then
         echo -e "\e[32mReceived ${#SIGNALS[@]} signals from sensor(s) at $WHEEL.\e[0m"
         WHEEL_SUMMARY=""
