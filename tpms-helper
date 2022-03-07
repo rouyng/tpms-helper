@@ -5,82 +5,82 @@
 # for more information, see README.md
 
 # minimum signal strength level for detection. Decrease this if no sensor is detected, increase it if multiple sensors are detected
-MINLEVEL="-0.5"
+readonly MINLEVEL="-0.5"
 # sensor type, default is 110 for Toyota's PMJ-107V. See rtl_433 docs for more options
-SENSOR_TYPE="110"
+readonly SENSOR_TYPE="110"
 # Receive frequency to listen for signals, in Hz. Default is 315 MHz for Toyota sensors
-RX_FREQ="315000000" 
+readonly RX_FREQ="315000000" 
 
 # define command to run rtl_433
-RUNSDR="rtl_433 -M level -f ${RX_FREQ} -F json -T 60 -R ${SENSOR_TYPE} -Y minlevel=${MINLEVEL}"
+readonly RUNSDR="rtl_433 -M level -f ${RX_FREQ} -F json -T 60 -R ${SENSOR_TYPE} -Y minlevel=${MINLEVEL}"
 
 ###############################
 # Parse json-formatted output of a single signal decoded by rtl_433, set variables, and print details of the signal
 # Globals:
-#  ID
-#  RSSI
-#  BATTERY_STATUS
+#  id
+#  rssi
+#  battery_status
 # Arguments:
 #  String containing json representing one signal decode by rtl_433 -F json
 ###############################
 parse_signal() {
-    ID="n/a"
-    RSSI="n/a"
-    BATTERY_STATUS="n/a"
-    ID=$(echo "$1" | jq ".id")
-    RSSI=$(echo "$1" | jq ".rssi")
+    id="n/a"
+    rssi="n/a"
+    battery_status="n/a"
+    id=$(echo "$1" | jq ".id")
+    rssi=$(echo "$1" | jq ".rssi")
     if [[ $(echo "$1" | jq ".battery_ok") = 1 ]]; then
-        BATTERY_STATUS="ok"
+        battery_status="ok"
     elif [[ $(echo "$1" | jq ".battery_ok") = 0 ]]; then
-        BATTERY_STATUS="\e[31mlow\e[0m"
+        battery_status="\e[31mlow\e[0m"
     else
-        BATTERY_STATUS="unknown"
+        battery_status="unknown"
     fi
-    echo -e "  └─Found sensor with ID ${ID}, signal strength is ${RSSI}, battery is ${BATTERY_STATUS}"
+    echo -e "  └─Found sensor with ID ${id}, signal strength is ${rssi}, battery is ${battery_status}"
 }
 
 # declare an associative array for our formatted results, this also acts as a check for bash >4.0
-declare -A WHEEL_SUMMARIES 2> /dev/null || { echo -e "This script requires Bash >4.0, please update your bash version before running"; exit 1; }
+declare -A wheel_summaries 2> /dev/null || { echo -e "This script requires Bash >4.0, please update your bash version before running"; exit 1; }
 
 # checking for rtl_433 installation
 rtl_433 -V > /dev/null 2>&1 || { echo -e "\e[31mrtl_433 was not found, please install it.\e[0m" >&2; exit 1; }
 
-WHEELS=("front left wheel" "back left wheel" "back right wheel" "front right wheel")
-for WHEEL in "${WHEELS[@]}"; do
+wheels=("front left wheel" "back left wheel" "back right wheel" "front right wheel")
+for wheel in "${wheels[@]}"; do
     # prompt user to place sensor at appropriate wheel and wait for input
-    echo -e "\e[33mPlease place antenna at ${WHEEL}"
+    echo -e "\e[33mPlease place antenna at ${wheel}"
     read -n 1 -s -r -p "Press any key to begin listening for signals"
     echo -e "\e[0m"
     # begin listening for sensor transmissions and save json output 
-    #  to SIGNALS array
+    #  to signals array
     echo -e "\e[32mRunning rtl_433, please wait...\e[0m"
     output=$($RUNSDR) || { echo -e "\e[31mCould not connect to RTL-SDR!\e[0m" >&2; exit 1; }
-    mapfile -t SIGNALS < <( echo "${output}" | grep "{*}" )
-    if [[ ${#SIGNALS[@]} -gt 0 ]]; then
-        echo -e "\e[32mReceived ${#SIGNALS[@]} signals from sensor(s) at ${WHEEL}.\e[0m"
-        WHEEL_SUMMARY=""
-        for SIGNAL in "${SIGNALS[@]}"; do
-            parse_signal "${SIGNAL}"
-            printf -v WHEEL_SUMMARY "%s  └─ID: %s, RSSI: %s, Battery status: %s\n" "${WHEEL_SUMMARY}" "${ID}" "${RSSI}" "${BATTERY_STATUS}"
+    mapfile -t signals < <( echo "${output}" | grep "{*}" )
+    if [[ ${#signals[@]} -gt 0 ]]; then
+        echo -e "\e[32mReceived ${#signals[@]} signals from sensor(s) at ${wheel}.\e[0m"
+        wheel_summary=""
+        for signal in "${signals[@]}"; do
+            parse_signal "${signal}"
+            printf -v wheel_summary "%s  └─ID: %s, RSSI: %s, Battery status: %s\n" "${wheel_summary}" "${id}" "${rssi}" "${battery_status}"
         done
-        WHEEL_SUMMARIES["$WHEEL"]="${WHEEL_SUMMARY}"
-    elif [[ ${#SIGNALS[@]} == 0 ]]; then
-        echo -e "\e[31mReceived no signals at $WHEEL.\e[0m"
-        WHEEL_SUMMARIES["$WHEEL"]="  └─\e[31mNONE! Sensor may be faulty or have a dead battery\e[0m"
+        wheel_summaries["$wheel"]="${wheel_summary}"
+    elif [[ ${#signals[@]} == 0 ]]; then
+        echo -e "\e[31mReceived no signals at $wheel.\e[0m"
+        wheel_summaries["$wheel"]="  └─\e[31mNONE! Sensor may be faulty or have a dead battery\e[0m"
     fi
 done
 
 echo -e "\e[1;32mSummary of sensors detected\e[0m"
-for POSITION in "${!WHEEL_SUMMARIES[@]}"; do
-    echo -e "\e[1m${POSITION}\e[0m"
-    SIGNAL_COUNT=$(( $(echo "${WHEEL_SUMMARIES[$POSITION]}" | wc -l )-1 ))
-    if [[ SIGNAL_COUNT -gt 1 ]]; then
-        TOO_MANY_SIGNALS=true
+for position in "${!wheel_summaries[@]}"; do
+    echo -e "\e[1m${position}\e[0m"
+    signal_count=$(( $(echo "${wheel_summaries[$position]}" | wc -l )-1 ))
+    if [[ "${signal_count}" -gt 1 ]]; then
+        too_many_signals=true
     else
-        TOO_MANY_SIGNALS=false
+        too_many_signals=false
     fi
-    echo -e "${WHEEL_SUMMARIES[$POSITION]}"
+    echo -e "${wheel_summaries[$position]}"
 done
-if $TOO_MANY_SIGNALS; then
+if $too_many_signals; then
     echo -e "\e[33mWarning: Received more than one signal at a wheel, consider increasing the MINLEVEL from the current value of ${MINLEVEL}, to filter adjacent sensors\e[0m"
 fi
