@@ -27,12 +27,13 @@ parse_signal() {
     echo -e "  └─Found sensor with ID $ID, signal strength is $RSSI, battery is $BATTERY_STATUS"
 }
 
+# declare an associative array for our formatted results, this also acts as a check for bash >4.0
+declare -A WHEEL_SUMMARIES 2> /dev/null || { echo -e "This script requires Bash >4.0, please update your bash version before running"; exit 1; }
 
 # checking for rtl_433 installation
 rtl_433 -V > /dev/null 2>&1 || { echo -e "\e[31mrtl_433 was not found, please install it.\e[0m" >&2; exit 1; }
 
 WHEELS=("front left wheel" "back left wheel" "back right wheel" "front right wheel") # define the four wheel positions to check
-declare -A WHEEL_SUMMARIES
 for WHEEL in "${WHEELS[@]}"; do
     # prompt user to place sensor at appropriate wheel and wait for input
     echo -e "\e[33mPlease place antenna at $WHEEL"
