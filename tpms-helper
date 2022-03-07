@@ -4,15 +4,20 @@
 # Requires bash >4.0, rtl_433, jq
 # for more information, see README.md
 
-# minimum signal strength level for detection. Decrease this if no sensor is detected, increase it if multiple sensors are detected
+# Minimum signal strength level for detection.
+# Decrease if no sensor is detected
+# Increase if multiple sensors are detected
 readonly MINLEVEL="-0.5"
-# sensor type, default is 110 for Toyota's PMJ-107V. See rtl_433 docs for more options
+# Sensor type, default is 110 for Toyota's PMJ-107V. See rtl_433 docs for more options
 readonly SENSOR_TYPE="110"
 # Receive frequency to listen for signals, in Hz. Default is 315 MHz for Toyota sensors
 readonly RX_FREQ="315000000" 
+# Time in seconds to listen for signals.
+# Default is 60, as Toyota sensors xmit every 60s. Other sensors may need more
+readonly DURATION="60"
 
 # define command to run rtl_433
-readonly RUNSDR="rtl_433 -M level -f ${RX_FREQ} -F json -T 60 -R ${SENSOR_TYPE} -Y minlevel=${MINLEVEL}"
+readonly RUNSDR="rtl_433 -M level -f ${RX_FREQ} -F json -T ${DURATION} -R ${SENSOR_TYPE} -Y minlevel=${MINLEVEL}"
 
 ###############################
 # Parse json-formatted output of a single signal decoded by rtl_433, set variables, and print details of the signal
@@ -21,7 +26,7 @@ readonly RUNSDR="rtl_433 -M level -f ${RX_FREQ} -F json -T 60 -R ${SENSOR_TYPE} 
 #  rssi
 #  battery_status
 # Arguments:
-#  String containing json representing one signal decode by rtl_433 -F json
+#  String containing json representing one signal decoded by rtl_433 -F json
 ###############################
 parse_signal() {
     id="n/a"
