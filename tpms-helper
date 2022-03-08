@@ -1,7 +1,7 @@
 #!/bin/bash
 # TPMS Helper v1
 # Bash shell script to guide testing of Toyota PMV-107J TPMS sensors using rtl_433
-# Requires bash >4.0, rtl_433, jq
+# Requires bash >4.0, rtl_433, jq, bc
 # for more information, see README.md
 
 # Minimum signal strength level for detection.
@@ -64,9 +64,24 @@ for wheel in "${wheels[@]}"; do
     if [[ ${#signals[@]} -gt 0 ]]; then
         echo -e "\e[32mReceived ${#signals[@]} signals from sensor(s) at ${wheel}.\e[0m"
         wheel_summary=""
+        max_rssi=-99
+        signal_descriptions=() 
         for signal in "${signals[@]}"; do
             parse_signal "${signal}"
-            printf -v wheel_summary "%s  └─ID: %s, RSSI: %s, Battery status: %s\n" "${wheel_summary}" "${id}" "${rssi}" "${battery_status}"
+            # keep track of the max RSSI at each wheel
+            # we use bc to compare rssi values because bash can't compare floating point numbers
+            if [[ $(echo "${rssi}>${max_rssi}" | bc) == 1 ]]; then
+                max_rssi="${rssi}"
+            fi
+            printf -v parsed_signal "  └─ID: %s, RSSI: %s, Battery status: %s" "${id}" "${rssi}" "${battery_status}"
+            signal_descriptions+=("${parsed_signal}")
+        done
+        for description in "${signal_descriptions[@]}"; do
+            # if we have multiple signals at a wheel, we add a note to the one with the greatest RSSI
+            if [[ ${#signals[@]} -gt 1 ]] && { echo "${description}" | grep -q -- "${max_rssi}"; }; then
+                printf -v description "%s \e[1m<- strongest signal\e[0m" "${description}"
+            fi
+            wheel_summary+="${description}\n"
         done
         wheel_summaries["$wheel"]="${wheel_summary}"
     elif [[ ${#signals[@]} == 0 ]]; then
@@ -75,21 +90,17 @@ for wheel in "${wheels[@]}"; do
     fi
 done
 
-echo -e "\e[1;32mSummary of sensors detected\e[0m"
+# Now we print a nicely formatted summary of all detected sensors
+echo -e "\n\e[1mSummary of sensors detected\e[0m"
+too_many_signals=false
 for position in "${!wheel_summaries[@]}"; do
     echo -e "\e[1m${position}\e[0m"
-    signal_count=$(( $(echo "${wheel_summaries[$position]}" | wc -l )-1 ))
+    signal_count=$(( $(echo -e "${wheel_summaries[$position]}" | wc -l )-1 ))
     if [[ "${signal_count}" -gt 1 ]]; then
         too_many_signals=true
-    else
-        too_many_signals=false
     fi
     echo -e "${wheel_summaries[$position]}"
 done
 if $too_many_signals; then
     echo -e "\e[33mWarning: Received more than one signal at a wheel, consider increasing the MINLEVEL from the current value of ${MINLEVEL}, to filter adjacent sensors\e[0m"
 fi
-
-# TODO: instead of just printing a warning about too many signals, increase MINLEVEL and loop through detection
-#   process again until no more than one signal is detected at each wheel
-# TODO: use bc to compare and rank signal strength of multiple signals
