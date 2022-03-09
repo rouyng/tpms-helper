@@ -6,6 +6,7 @@ I created this script as a companion to the TPMS sensor testing process describe
 ## Requirements
 - [bash shell](https://www.gnu.org/software/bash/), version 4.0 or later
 - [jq](https://stedolan.github.io/jq/)
+- [bc](https://www.gnu.org/software/bc/)
 - [rtl_433](https://github.com/merbanan/rtl_433)
 - SDR hardware compatible with rtl_433
 
