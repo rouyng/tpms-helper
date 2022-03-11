@@ -51,6 +51,7 @@ declare -A wheel_summaries 2> /dev/null || { echo -e "This script requires Bash 
 rtl_433 -V > /dev/null 2>&1 || { echo -e "\e[31mrtl_433 was not found, please install it.\e[0m" >&2; exit 1; }
 
 wheels=("front left wheel" "back left wheel" "back right wheel" "front right wheel")
+too_many_signals=false
 for wheel in "${wheels[@]}"; do
     # prompt user to place sensor at appropriate wheel and wait for input
     echo -e "\e[33mPlease place antenna at ${wheel}"
@@ -80,6 +81,7 @@ for wheel in "${wheels[@]}"; do
             # if we have multiple signals at a wheel, we add a note to the one with the greatest RSSI
             if [[ ${#signals[@]} -gt 1 ]] && { echo "${description}" | grep -q -- "${max_rssi}"; }; then
                 printf -v description "%s \e[1m<- strongest signal\e[0m" "${description}"
+                too_many_signals=true # show a multiple signal warning in the summary
             fi
             wheel_summary+="${description}\n"
         done
@@ -92,15 +94,10 @@ done
 
 # Now we print a nicely formatted summary of all detected sensors
 echo -e "\n\e[1mSummary of sensors detected\e[0m"
-too_many_signals=false
 for position in "${!wheel_summaries[@]}"; do
     echo -e "\e[1m${position}\e[0m"
-    signal_count=$(( $(echo -e "${wheel_summaries[$position]}" | wc -l )-1 ))
-    if [[ "${signal_count}" -gt 1 ]]; then
-        too_many_signals=true
-    fi
     echo -e "${wheel_summaries[$position]}"
 done
 if $too_many_signals; then
-    echo -e "\e[33mWarning: Received more than one signal at a wheel, consider increasing the MINLEVEL from the current value of ${MINLEVEL}, to filter adjacent sensors\e[0m"
+    echo -e "\e[33mWarning: Received more than one signal at a wheel. Consider increasing the MINLEVEL from the current value of ${MINLEVEL}, to filter adjacent sensors\e[0m"
 fi
