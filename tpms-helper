@@ -46,9 +46,12 @@ parse_signal() {
 
 # declare an associative array for our formatted results, this also acts as a check for bash >4.0
 declare -A wheel_summaries 2> /dev/null || { echo -e "This script requires Bash >4.0, please update your bash version before running"; exit 1; }
-
-# checking for rtl_433 installation
+# checking for rtl_433
 rtl_433 -V > /dev/null 2>&1 || { echo -e "\e[31mrtl_433 was not found, please install it.\e[0m" >&2; exit 1; }
+# check for bc
+bc -v > /dev/null 2>&1 || { echo -e "\e[31mbc was not found, please install it.\e[0m" >&2; exit 1; }
+# check for jq
+jq --version > /dev/null 2>&1 || { echo -e "\e[31mjq was not found, please install it.\e[0m" >&2; exit 1; }
 
 wheels=("front left wheel" "back left wheel" "back right wheel" "front right wheel")
 for wheel in "${wheels[@]}"; do
